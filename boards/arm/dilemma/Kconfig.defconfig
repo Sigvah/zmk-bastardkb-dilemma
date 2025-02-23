@@ -1,0 +1,37 @@
+#
+# Copyright (c) 2024 The ZMK Contributors
+# SPDX-License-Identifier: MIT
+#
+
+if BOARD_DILEMMA_RIGHT
+
+config ZMK_KEYBOARD_NAME
+    default "Dilemma"
+
+config ZMK_SPLIT_ROLE_CENTRAL
+    default y
+
+endif # BOARD_DILEMMA_RIGHT
+
+if BOARD_DILEMMA_LEFT || BOARD_DILEMMA_RIGHT
+    
+config BOARD
+    default "dilemma"
+
+config ZMK_SPLIT
+    default y
+
+config ZMK_SPLIT_SERIAL
+	default y
+
+config SERIAL
+    default y
+
+if ZMK_RGB_UNDERGLOW
+
+config WS2812_STRIP
+    default y
+
+endif # ZMK_RGB_UNDERGLOW
+
+endif # BOARD_DILEMMA_LEFT || BOARD_DILEMMA_RIGHT

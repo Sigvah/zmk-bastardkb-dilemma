@@ -1,0 +1,15 @@
+identifier: dilemma
+name: Dilemma
+type: mcu
+arch: arm
+flash: 2048
+ram: 264
+toolchain:
+  - zephyr
+  - gnuarmemb
+  - xtools
+supported:
+  - gpio
+  - usb_device
+  - hwinfo
+  - pwm

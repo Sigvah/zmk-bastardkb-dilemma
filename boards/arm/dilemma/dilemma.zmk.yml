@@ -1,0 +1,15 @@
+file_format: "1"
+id: dilemma
+name: Dilemma
+url: https://bastardkb.com/product/dilemma-prebuilt-preorder/
+type: board
+arch: arm
+features:
+  - keys
+  - underglow
+  - studio
+outputs:
+  - usb
+siblings:
+  - dilemma_left
+  - dilemma_right
