@@ -1,0 +1,16 @@
+---
+include:
+  - board: dilemma_left
+    snippet: zmk-usb-logging
+    artifact-name: dilemma_left_logging
+  - board: dilemma_right
+    snippet: zmk-usb-logging
+    artifact-name: dilemma_right_logging
+  - board: dilemma_left
+    snippet: studio-rpc-usb-uart
+    cmake-args: -DCONFIG_ZMK_STUDIO=y
+    artifact-name: dilemma_left_studio
+  - board: dilemma_right
+    snippet: studio-rpc-usb-uart
+    cmake-args: -DCONFIG_ZMK_STUDIO=y
+    artifact-name: dilemma_right_studio
