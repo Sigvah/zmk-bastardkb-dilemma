@@ -12,6 +12,7 @@
 #include <dt-bindings/zmk/matrix_transform.h>
 #include "dilemma-pinctrl.dtsi"
 #include "dilemma-layouts.dtsi"
+#include "vik_connector.dtsi"
 
 / {
     model = "Dilemma";
