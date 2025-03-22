@@ -36,10 +36,6 @@
 &lt { quick-tap-ms = <175>; };
 
 / {
-    chosen { zmk,matrix_transform = &five_column_transform; };
-};
-
-/ {
     behaviors {
         hml: hml {
             compatible = "zmk,behavior-hold-tap";
@@ -258,7 +254,7 @@
             label = "HMR_SHIFT";
         };
     };
-    
+
     keymap {
         compatible = "zmk,keymap";
 
