@@ -45,7 +45,7 @@
             bias-pull-up;
         };
         tx_pins {
-            pinmux = <PIO0_P12>; // TX Bodged to VIK GPIO1 for central half.
+            pinmux = <PIO0_P13>; // TX Bodged to `QP_RST` for central half.
         };
     };
 };
