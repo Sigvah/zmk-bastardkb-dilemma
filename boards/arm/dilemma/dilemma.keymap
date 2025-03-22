@@ -5,6 +5,7 @@
  */
 #include "keys_nb_osx.h"
 #include "keys_nb_win.h"
+#include "combos.dtsi"
 
 #include <dt-bindings/zmk/pointing.h>
 #include <behaviors.dtsi>
