@@ -300,7 +300,7 @@
             bindings = <
   &kp LS(F5)    &kp LG(L)    &kp RIGHT_ALT  &kp LS(F8)  &none     &kp WNB_BSLH  &kp N7  &kp N8  &kp N9  &kp WNB_STAR
   &kp LCTRL  &kp LALT     &kp LGUI      &kp LSHIFT  &tog 4    &kp WNB_FSLH  &kp N4  &kp N5  &kp N6  &kp WNB_EQUAL
-  &sys_reset    &kp LS(F10)  &kp LS(F11)    &kp RALT    &none     &kp WNB_PIPE  &kp N1  &kp N2  &kp N3  &kp WNB_PLUS
+  &studio_unlock    &bootloader  &kp LS(F11)    &kp RALT    &none     &kp WNB_PIPE  &kp N1  &kp N2  &kp N3  &kp WNB_PLUS
                                             &none       &none     &kp DOT       &kp N0  &none
             >;
 
@@ -312,7 +312,7 @@
             bindings = <
   &none     &none  &none  &none  &none      &none  &none            &kp C_SLEEP  &kp C_POWER  &none
   &kp LEFT  &kp DOWN      &kp UP        &kp RIGHT     &tog 4     &none  &kp RIGHT_SHIFT  &kp RGUI    &kp LALT     &kp RCTRL
-  &kp HOME  &kp PG_DN     &kp PG_UP     &kp END       &none      &none  &kp HOME         &none        &kp END      &sys_reset
+  &kp HOME  &kp PG_DN     &kp PG_UP     &kp END       &none      &none  &kp HOME         &none        &bootloader     &studio_unlock
                                    &none     &kp ESC       &kp TAB    &none  &none &none
             >;
 
