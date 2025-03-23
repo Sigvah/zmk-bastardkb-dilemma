@@ -8,6 +8,12 @@
             bindings = <&ques_excl>;
         };
 
+        aa {
+            timeout-ms = <35>;
+            bindings = <&kp NB_A_RING>;
+            key-positions = <26 27>;
+        };
+
         ae {
             timeout-ms = <35>;
             bindings = <&kp APOS>;
