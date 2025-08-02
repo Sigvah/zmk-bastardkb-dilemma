@@ -25,14 +25,38 @@
         zephyr,code-partition = &code_partition;
         zmk,kscan = &kscan0;
         zmk,physical-layout = &default_layout;
-        zmk,split-uart = &pio0_uart0;
         zmk,underglow = &led_strip;
+    };
+
+    wired_split {
+        compatible = "zmk,wired-split";
+        device = <&pio0_uart0>;
     };
 
     xtal_clk: xtal-clk {
         compatible = "fixed-clock";
         clock-frequency = <12000000>;
         #clock-cells = <0>;
+    };
+
+    kscan0: kscan {
+        compatible = "zmk,kscan-gpio-matrix";
+        wakeup-source;
+
+        diode-direction = "row2col";
+        row-gpios
+            = <&gpio0 26 GPIO_ACTIVE_HIGH> // M_ROW1
+            , <&gpio0  4 GPIO_ACTIVE_HIGH> // M_ROW2
+            , <&gpio0  5 GPIO_ACTIVE_HIGH> // M_ROW3
+            , <&gpio0 27 GPIO_ACTIVE_HIGH> // M_ROW4
+            ;
+        col-gpios
+            = <&gpio0  8 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)> // M_COL1
+            , <&gpio0  9 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)> // M_COL2
+            , <&gpio0  7 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)> // M_COL3
+            , <&gpio0  6 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)> // M_COL4
+            , <&gpio0 28 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)> // M_COL5
+            ;
     };
 
     default_transform: keymap_transform_0 {

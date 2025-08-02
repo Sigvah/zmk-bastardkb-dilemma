@@ -11,12 +11,9 @@ manifest:
       # remote: zmkfirmware
       # revision: main
       remote: paulshir
-      revision: pr2766+pio-led
+      revision: main+pio-led
       # revision: paulshir
       # revision: split-serial-pr+pio-led
       import: app/west.yml
-    - name: zmk-behaviors-dev
-      remote: paulshir
-      revision: main
   self:
     path: config

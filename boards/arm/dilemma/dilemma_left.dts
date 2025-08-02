@@ -7,29 +7,6 @@
 /dts-v1/;
 #include "dilemma.dtsi"
 
-// TODO: Move kscan into `dilemma.dtsi`?
-/{
-    kscan0: kscan {
-        compatible = "zmk,kscan-gpio-matrix";
-        wakeup-source;
-
-        diode-direction = "row2col";
-        row-gpios
-            = <&gpio0 26 GPIO_ACTIVE_HIGH> // M_ROW1
-            , <&gpio0  4 GPIO_ACTIVE_HIGH> // M_ROW2
-            , <&gpio0  5 GPIO_ACTIVE_HIGH> // M_ROW3
-            , <&gpio0 27 GPIO_ACTIVE_HIGH> // M_ROW4
-            ;
-        col-gpios
-            = <&gpio0  8 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)> // M_COL1
-            , <&gpio0  9 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)> // M_COL2
-            , <&gpio0  7 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)> // M_COL3
-            , <&gpio0  6 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)> // M_COL4
-            , <&gpio0 28 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)> // M_COL5
-            ;
-    };
-};
-
 &pinctrl {
     pio0_uart0_default: pio0_uart0_default {
         rx_pins {
