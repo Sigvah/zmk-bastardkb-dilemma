@@ -5,7 +5,8 @@
  */
 
 /dts-v1/;
-#include <rpi_pico/rp2040.dtsi>
+#include <raspberrypi/rpi_pico/rp2040.dtsi>
+#include <arm/raspberrypi/rp2040-boot-mode-retention.dtsi>
 #include <zephyr/dt-bindings/led/led.h>
 #include <zephyr/dt-bindings/pinctrl/rpi-pico-rp2040-pinctrl.h>
 
@@ -31,12 +32,6 @@
     wired_split {
         compatible = "zmk,wired-split";
         device = <&pio0_uart0>;
-    };
-
-    xtal_clk: xtal-clk {
-        compatible = "fixed-clock";
-        clock-frequency = <12000000>;
-        #clock-cells = <0>;
     };
 
     kscan0: kscan {
@@ -106,6 +101,20 @@ zephyr_udc0: &usbd {
 
 &gpio0 {
     status = "okay";
+};
+
+&timer {
+    status = "okay";
+};
+
+&rtc {
+    clocks = <&clocks RPI_PICO_CLKID_CLK_RTC>;
+    status = "okay";
+};
+
+&vreg {
+    regulator-always-on;
+    regulator-allowed-modes = <REGULATOR_RPI_PICO_MODE_NORMAL>;
 };
 
 &pio0 {
