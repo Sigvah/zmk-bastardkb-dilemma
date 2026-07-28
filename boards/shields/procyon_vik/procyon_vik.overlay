@@ -1,0 +1,38 @@
+/*
+ * Copyright (c) 2026 The ZMK Contributors
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Procyon trackpad (https://github.com/george-norton/procyon) connected
+ * via the VIK FFC connector. CHG is routed to VIK GPIO_AD1 per the
+ * Procyon schematic.
+ */
+
+&vik_i2c {
+    status = "okay";
+
+    trackpad: maxtouch@4a {
+        compatible = "microchip,maxtouch";
+        reg = <0x4a>;
+        chg-gpios = <&vik_conn 3 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>; // vik AD_1
+
+        /*
+         * Dimensions of the 42x50 Procyon variant.
+         * For the 57x80 variant use sensor-width = <57>; sensor-height = <80>;
+         */
+        sensor-width = <42>;
+        sensor-height = <50>;
+
+        /*
+         * Orientation tweaks if the cursor moves the wrong way:
+         * swap-xy; invert-x; invert-y;
+         */
+    };
+};
+
+/ {
+    trackpad_listener: trackpad_listener {
+        compatible = "zmk,input-listener";
+        device = <&trackpad>;
+    };
+};

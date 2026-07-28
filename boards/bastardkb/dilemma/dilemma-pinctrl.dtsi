@@ -4,4 +4,12 @@
             pinmux = <PIO1_P10>;
         };
     };
+
+    i2c1_default: i2c1_default {
+        group1 {
+            pinmux = <I2C1_SDA_P2>, <I2C1_SCL_P3>; // vik SDA / vik SCL
+            input-enable;
+            input-schmitt-enable;
+        };
+    };
 };

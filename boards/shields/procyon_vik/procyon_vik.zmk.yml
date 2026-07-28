@@ -1,0 +1,7 @@
+file_format: "1"
+id: procyon_vik
+name: Procyon VIK Trackpad
+type: shield
+url: https://github.com/george-norton/procyon
+features:
+  - pointer

@@ -103,6 +103,16 @@ zephyr_udc0: &usbd {
     status = "okay";
 };
 
+/*
+ * I2C bus exposed on the VIK connector (vik_i2c). Left disabled here;
+ * VIK module shields (e.g. procyon_vik) enable it.
+ */
+&i2c1 {
+    pinctrl-0 = <&i2c1_default>;
+    pinctrl-names = "default";
+    clock-frequency = <I2C_BITRATE_FAST>;
+};
+
 &timer {
     status = "okay";
 };

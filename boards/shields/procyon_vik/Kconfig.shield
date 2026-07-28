@@ -1,0 +1,7 @@
+# Copyright (c) 2026 The ZMK Contributors
+# SPDX-License-Identifier: MIT
+
+config SHIELD_PROCYON_VIK
+    def_bool $(shields_list_contains,procyon_vik)
+    select I2C
+    imply ZMK_POINTING
