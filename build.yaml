@@ -23,3 +23,12 @@ include:
     snippet: studio-rpc-usb-uart
     cmake-args: -DCONFIG_ZMK_STUDIO=y
     artifact-name: dilemma_right_procyon_studio
+  # Flash these once to wipe saved settings, then flash the normal firmware.
+  # The RGB underglow state is persisted to flash and overrides the defconfig
+  # defaults on boot, so a saved "off" state can only be cleared this way.
+  - board: dilemma_left
+    shield: settings_reset
+    artifact-name: dilemma_left_settings_reset
+  - board: dilemma_right
+    shield: settings_reset
+    artifact-name: dilemma_right_settings_reset
