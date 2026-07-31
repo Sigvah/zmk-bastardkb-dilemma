@@ -44,6 +44,15 @@ endchoice
 # every flush fail. At 100 the buffer is the whole 128x128, which is 16
 # whole pages and always aligned. 2KB for the buffer plus 2KB for the
 # monochrome conversion buffer is affordable here.
+# LVGL's object heap. Zephyr defaults this to 2048, which is not enough to
+# build a screen this size: allocation fails, LVGL's malloc assert fires and
+# the board panics, so the panel keeps whatever it powered up with and the
+# half stops scanning keys and never reaches USB. ZMK's nice_view shield
+# uses 8192 for a custom screen on a smaller 160x68 panel, so allow more
+# again for 128x128.
+config LV_Z_MEM_POOL_SIZE
+    default 16384
+
 config LV_Z_VDB_SIZE
     default 100
 
