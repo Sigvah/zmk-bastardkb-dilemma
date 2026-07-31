@@ -8,6 +8,9 @@
  * Procyon schematic.
  */
 
+#include <input/processors.dtsi>
+#include <dt-bindings/zmk/input_transform.h>
+
 &vik_i2c {
     status = "okay";
 
@@ -43,6 +46,9 @@
          */
         allowed_measurement_types = <1>;
 
+        /* Two fingers on the pad scrolls instead of moving the cursor. */
+        two-finger-scroll;
+
         /*
          * Orientation tweaks if the cursor moves the wrong way:
          * swap-xy; invert-x; invert-y;
@@ -54,5 +60,13 @@
     trackpad_listener: trackpad_listener {
         compatible = "zmk,input-listener";
         device = <&trackpad>;
+
+        /*
+         * Scroll deltas arrive in raw sensor units (~30 per mm), which is far
+         * too fast for wheel detents, so divide them down. Lower the divisor
+         * to scroll faster. To flip the scroll direction, add
+         * <&zip_scroll_transform INPUT_TRANSFORM_Y_INVERT> here.
+         */
+        input-processors = <&zip_scroll_scaler 1 40>;
     };
 };

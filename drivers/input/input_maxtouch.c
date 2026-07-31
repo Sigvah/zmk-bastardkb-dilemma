@@ -45,6 +45,18 @@ static inline bool is_t100_report(const struct device *dev, int report_id) {
             report_id < data->t100_first_report_id + 2 + config->max_touch_points);
 }
 
+static uint8_t mxt_active_fingers(const struct mxt_data *data) {
+    uint8_t count = 0;
+
+    for (int i = 0; i < MXT_MAX_FINGERS; i++) {
+        if (data->fingers[i].active) {
+            count++;
+        }
+    }
+
+    return count;
+}
+
 static void mxt_report_data(const struct device *dev) {
     const struct mxt_config *config = dev->config;
     struct mxt_data *data = dev->data;
@@ -89,7 +101,7 @@ static void mxt_report_data(const struct device *dev) {
 
             LOG_DBG("T100 touch: finger=%d ev=%d x=%d y=%d", finger_idx, ev, x_pos, y_pos);
 
-            /* Only track finger 0 for single-finger mouse movement */
+            /* Motion is driven by finger 0; the rest only track contact state */
             if (finger_idx >= MXT_MAX_FINGERS) {
                 break;
             }
@@ -109,9 +121,22 @@ static void mxt_report_data(const struct device *dev) {
                     data->fingers[0].last_x = x_pos;
                     data->fingers[0].last_y = y_pos;
                     if (dx != 0 || dy != 0) {
-                        input_report_rel(dev, INPUT_REL_X, dx, false, K_NO_WAIT);
-                        input_report_rel(dev, INPUT_REL_Y, dy, true, K_NO_WAIT);
-                        LOG_DBG("REL move: dx=%d dy=%d", dx, dy);
+                        /*
+                         * With two or more fingers down, translate the leading
+                         * finger's motion into scroll rather than cursor
+                         * movement. The raw deltas are in sensor units, so a
+                         * scroll scaler in the input listener is expected to
+                         * divide these down to sensible wheel detents.
+                         */
+                        if (config->two_finger_scroll && mxt_active_fingers(data) >= 2) {
+                            input_report_rel(dev, INPUT_REL_HWHEEL, dx, false, K_NO_WAIT);
+                            input_report_rel(dev, INPUT_REL_WHEEL, -dy, true, K_NO_WAIT);
+                            LOG_DBG("REL scroll: dx=%d dy=%d", dx, -dy);
+                        } else {
+                            input_report_rel(dev, INPUT_REL_X, dx, false, K_NO_WAIT);
+                            input_report_rel(dev, INPUT_REL_Y, dy, true, K_NO_WAIT);
+                            LOG_DBG("REL move: dx=%d dy=%d", dx, dy);
+                        }
                     }
                 }
                 break;
@@ -539,6 +564,7 @@ static int mxt_init(const struct device *dev) {
         .active_acq_time = DT_INST_PROP_OR(n, active_acq_time_ms, 10),                                  \
         .active_to_idle_timeout = DT_INST_PROP_OR(n, active_to_idle_timeout_ms, 50),                    \
         .repeat_each_cycle = DT_INST_PROP(n, repeat_each_cycle),                                        \
+        .two_finger_scroll = DT_INST_PROP(n, two_finger_scroll),                                        \
         .swap_xy = DT_INST_PROP(n, swap_xy),                                                            \
         .invert_x = DT_INST_PROP(n, invert_x),                                                          \
         .invert_y = DT_INST_PROP(n, invert_y),                                                          \

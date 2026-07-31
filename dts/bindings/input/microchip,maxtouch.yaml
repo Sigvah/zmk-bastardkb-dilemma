@@ -16,6 +16,12 @@ properties:
   repeat-each-cycle:
     type: boolean
     description: Repeat events for any active touches each scan, even if no changes detected.
+  two-finger-scroll:
+    type: boolean
+    description: |
+      Report scroll wheel events instead of cursor movement while two or more
+      fingers are in contact. The deltas are in raw sensor units, so pair this
+      with a scroll scaler input processor on the listener.
   swap-xy:
     type: boolean
   invert-x:

@@ -53,6 +53,7 @@ struct mxt_config {
     const bool invert_x;
     const bool invert_y;
     const bool repeat_each_cycle;
+    const bool two_finger_scroll;
     const uint16_t sensor_width;
     const uint16_t sensor_height;
     const uint8_t touch_threshold;
