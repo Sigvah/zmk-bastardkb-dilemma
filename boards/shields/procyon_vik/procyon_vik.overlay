@@ -17,11 +17,31 @@
         chg-gpios = <&vik_conn 3 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>; // vik AD_1
 
         /*
-         * Dimensions of the 42x50 Procyon variant.
-         * For the 57x80 variant use sensor-width = <57>; sensor-height = <80>;
+         * Dimensions of the 50x42 Procyon (the early prototype variant).
+         * For the 42x50 use  sensor-width = <42>; sensor-height = <50>;
+         * For the 57x80 use  sensor-width = <57>; sensor-height = <80>;
          */
-        sensor-width = <42>;
-        sensor-height = <50>;
+        sensor-width = <50>;
+        sensor-height = <42>;
+
+        /*
+         * Sensor tuning, matching the values QMK's procyon.h uses for this
+         * board. Without these the driver's generic defaults are far too
+         * insensitive and the pad appears dead.
+         */
+        gain = <10>;
+        touch_threshold = <20>;
+        touch_hysteresis = <10>;
+        internal_touch_threshold = <10>;
+        internal_touch_hysteresis = <5>;
+        retransmission_compensation_disable;
+
+        /*
+         * Mutual capacitance only. The 50x42 board's matrix size prohibits
+         * self capacitance measurements, so the default of 3 yields no
+         * usable touch reports on this variant.
+         */
+        allowed_measurement_types = <1>;
 
         /*
          * Orientation tweaks if the cursor moves the wrong way:
