@@ -68,5 +68,14 @@
          * <&zip_scroll_transform INPUT_TRANSFORM_Y_INVERT> here.
          */
         input-processors = <&zip_scroll_scaler 1 40>;
+
+        /*
+         * Scroll layer, mirroring the charybdis config in cnano-dongle:
+         * while layer 8 is held, cursor motion becomes scroll.
+         */
+        scroller {
+            layers = <8>;
+            input-processors = <&zip_xy_scaler 1 10>, <&zip_xy_to_scroll_mapper>;
+        };
     };
 };
