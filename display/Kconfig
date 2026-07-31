@@ -1,0 +1,11 @@
+# Copyright (c) 2026 The ZMK Contributors
+# SPDX-License-Identifier: MIT
+
+config DILEMMA_OLED_SCREEN
+    bool "Animated status screen for the 128x128 VIK OLED"
+    depends on ZMK_DISPLAY_STATUS_SCREEN_CUSTOM
+    select LV_USE_LABEL
+    help
+      Provides zmk_display_status_screen() for the custom status screen.
+      The left half is the split peripheral and cannot see layer or output
+      state, so this screen renders an animation rather than widgets.

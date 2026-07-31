@@ -32,3 +32,10 @@ include:
   - board: dilemma_right
     shield: settings_reset
     artifact-name: dilemma_right_settings_reset
+  - board: dilemma_left
+    shield: oled_vik
+    artifact-name: dilemma_left_oled
+  - board: dilemma_left
+    shield: oled_vik
+    snippet: zmk-usb-logging
+    artifact-name: dilemma_left_oled_logging

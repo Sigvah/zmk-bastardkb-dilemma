@@ -1,0 +1,8 @@
+file_format: "1"
+id: oled_vik
+name: 1.5" 128x128 OLED (SH1107) on VIK
+type: shield
+url: https://github.com/sadekbaroudi/vik
+requires: [vik]
+features:
+  - display
