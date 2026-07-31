@@ -8,13 +8,17 @@ config ZMK_DISPLAY
 
 if ZMK_DISPLAY
 
-# Default to ZMK's stock status screen. It is known good code, so bringing
-# the panel up on it keeps the unproven custom screen in
-# display/status_screen.c out of the picture. Switch the choice below to
-# ZMK_DISPLAY_STATUS_SCREEN_CUSTOM to get the animated screen back once the
-# panel itself is known to work.
+# The stock status screen is useless here. It draws nothing itself, only
+# widgets, and every one of those is pulled in with a weak imply that does
+# not resolve on this build, so it renders an empty screen. The custom
+# screen in display/status_screen.c draws its own content and needs no
+# widgets, which also suits the peripheral half having no layer or output
+# state to show.
+config DILEMMA_OLED_SCREEN
+    default y
+
 choice ZMK_DISPLAY_STATUS_SCREEN
-    default ZMK_DISPLAY_STATUS_SCREEN_BUILT_IN
+    default ZMK_DISPLAY_STATUS_SCREEN_CUSTOM
 endchoice
 
 # Keep display work off the system work queue. The ssd1306 write path is
