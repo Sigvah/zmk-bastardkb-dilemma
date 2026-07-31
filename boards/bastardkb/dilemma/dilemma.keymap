@@ -315,10 +315,10 @@
 
         nav {
             bindings = <
-  &none     &none      &kp C_BRI_DEC  &kp C_BRI_UP  &none      &none  &none      &kp C_SLEEP  &kp C_POWER  &bootloader
-  &kp LEFT  &kp DOWN   &kp UP         &kp RIGHT     &tog 4     &none  &kp RSHFT  &kp RGUI     &kp LALT     &kp RCTRL
-  &kp HOME  &kp PG_DN  &kp PG_UP      &kp END       &none      &none  &kp HOME   &none        &kp END      &sys_reset
-                       &none          &kp ESC       &kp TAB     &none  &none      &none
+  &bootloader  &none      &kp C_BRI_DEC  &kp C_BRI_UP  &none      &none  &none      &kp C_SLEEP  &kp C_POWER  &bootloader
+  &kp LEFT     &kp DOWN   &kp UP         &kp RIGHT     &tog 4     &none  &kp RSHFT  &kp RGUI     &kp LALT     &kp RCTRL
+  &kp HOME     &kp PG_DN  &kp PG_UP      &kp END       &none      &none  &kp HOME   &none        &kp END      &sys_reset
+                          &none          &kp ESC       &kp TAB     &none  &none      &none
             >;
 
             display-name = "NAV";
