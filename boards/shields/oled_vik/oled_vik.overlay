@@ -38,6 +38,14 @@
         display-offset = <0>;
         multiplex-ratio = <127>;   // 128 rows, versus 63 for a 128x64 panel
         prechargep = <0x22>;
+
+        /*
+         * The module is mounted upside down relative to the controller's
+         * native scan order, so flip both axes for a 180 degree rotation.
+         * If content ever comes out mirrored instead, drop one of these.
+         */
+        segment-remap;
+        com-invdir;
     };
 };
 

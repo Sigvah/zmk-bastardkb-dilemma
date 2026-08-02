@@ -3,17 +3,16 @@
  *
  * SPDX-License-Identifier: MIT
  *
- * Custom ZMK status screen for the 128x128 OLED on the left half.
+ * Conway's Game of Life on the left half's 128x128 OLED.
  *
- * The left half is the split peripheral, so the state the stock status
- * screen shows (active layer, output/endpoint, HID indicators) is only
- * known on the central and never reaches this display. This screen is
- * therefore self-contained and needs no keyboard state at all.
- *
- * Deliberately built from plain rectangles only. No labels, so no font is
- * involved in rendering, and nothing here depends on a theme having
- * supplied a default style.
+ * The left half is the split peripheral, so no layer or output state ever
+ * reaches this display; the screen is fully self-contained. A 32x32
+ * toroidal world is stepped by an LVGL timer and drawn as 4x4 pixel cells
+ * into an I1 canvas whose buffer lives in static memory, so rendering
+ * never touches the LVGL heap and involves no fonts or theme styling.
  */
+
+#include <zephyr/kernel.h>
 
 #include <lvgl.h>
 
@@ -24,27 +23,103 @@
  */
 lv_obj_t *zmk_display_status_screen(void);
 
-#define BAR_COUNT 8
-#define BAR_WIDTH 10
-#define BAR_GAP 4
-#define BAR_MIN_HEIGHT 8
-#define BAR_MAX_HEIGHT 86
-#define BAR_LEFT_MARGIN 9
-#define BAR_BOTTOM_MARGIN 12
+#define GRID 32
+#define CELL 4 /* pixels per cell edge; GRID * CELL == panel resolution */
+#define CANVAS_PX (GRID * CELL)
+#define STRIDE (CANVAS_PX / 8) /* bytes per canvas row at 1bpp */
+#define PALETTE_BYTES 8        /* I1: two lv_color32_t palette entries */
+#define STEP_MS 150
+#define STAGNANT_GENS 24 /* period <= 2 for this many steps -> reseed */
 
-static lv_obj_t *solid_rect(lv_obj_t *parent, int32_t w, int32_t h) {
-    lv_obj_t *rect = lv_obj_create(parent);
+static uint8_t canvas_buf[LV_CANVAS_BUF_SIZE(CANVAS_PX, CANVAS_PX, 1, 1)];
 
-    lv_obj_remove_style_all(rect);
-    lv_obj_set_style_bg_color(rect, lv_color_white(), LV_PART_MAIN);
-    lv_obj_set_style_bg_opa(rect, LV_OPA_COVER, LV_PART_MAIN);
-    lv_obj_set_size(rect, w, h);
+/* World plus one generation of history for period-1/2 stagnation checks. */
+static uint8_t world[GRID][GRID];
+static uint8_t scratch[GRID][GRID];
+static uint8_t prev2[GRID][GRID];
+static uint16_t stagnant_count;
 
-    return rect;
+static lv_obj_t *canvas;
+
+static uint32_t rng_state;
+
+static uint32_t rng_next(void) {
+    /* xorshift32: tiny and plenty for soup seeding */
+    rng_state ^= rng_state << 13;
+    rng_state ^= rng_state >> 17;
+    rng_state ^= rng_state << 5;
+    return rng_state;
 }
 
-static void bar_set_height(void *var, int32_t value) {
-    lv_obj_set_height((lv_obj_t *)var, value);
+static void seed_world(void) {
+    /*
+     * Random soup at ~1/3 density across the middle of the grid, leaving a
+     * quiet border so early activity does not immediately wrap around the
+     * torus and collide with itself.
+     */
+    memset(world, 0, sizeof(world));
+    for (int y = 3; y < GRID - 3; y++) {
+        for (int x = 3; x < GRID - 3; x++) {
+            world[y][x] = (rng_next() % 3) == 0;
+        }
+    }
+    stagnant_count = 0;
+}
+
+static void step_world(void) {
+    for (int y = 0; y < GRID; y++) {
+        int up = (y + GRID - 1) % GRID, down = (y + 1) % GRID;
+        for (int x = 0; x < GRID; x++) {
+            int left = (x + GRID - 1) % GRID, right = (x + 1) % GRID;
+            int n = world[up][left] + world[up][x] + world[up][right] + world[y][left] +
+                    world[y][right] + world[down][left] + world[down][x] + world[down][right];
+            scratch[y][x] = n == 3 || (n == 2 && world[y][x]);
+        }
+    }
+}
+
+static void draw_world(void) {
+    /*
+     * Write the I1 canvas buffer directly: an 8 byte palette header, then
+     * row-major rows of STRIDE bytes, most significant bit leftmost. Each
+     * cell row expands to a nibble pattern repeated for CELL panel rows.
+     */
+    uint8_t *rows = canvas_buf + PALETTE_BYTES;
+
+    for (int cy = 0; cy < GRID; cy++) {
+        uint8_t line[STRIDE];
+        for (int b = 0; b < STRIDE; b++) {
+            /* two cells per byte at 4px per cell */
+            uint8_t hi = world[cy][b * 2] ? 0xF0 : 0x00;
+            uint8_t lo = world[cy][b * 2 + 1] ? 0x0F : 0x00;
+            line[b] = hi | lo;
+        }
+        for (int r = 0; r < CELL; r++) {
+            memcpy(rows + (cy * CELL + r) * STRIDE, line, STRIDE);
+        }
+    }
+
+    lv_obj_invalidate(canvas);
+}
+
+static void life_tick(lv_timer_t *timer) {
+    step_world();
+
+    bool period1 = memcmp(scratch, world, sizeof(world)) == 0;
+    bool period2 = memcmp(scratch, prev2, sizeof(world)) == 0;
+    if (period1 || period2) {
+        if (++stagnant_count >= STAGNANT_GENS) {
+            seed_world();
+            draw_world();
+            return;
+        }
+    } else {
+        stagnant_count = 0;
+    }
+
+    memcpy(prev2, world, sizeof(world));
+    memcpy(world, scratch, sizeof(world));
+    draw_world();
 }
 
 lv_obj_t *zmk_display_status_screen(void) {
@@ -54,37 +129,25 @@ lv_obj_t *zmk_display_status_screen(void) {
     lv_obj_set_style_bg_color(screen, lv_color_black(), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(screen, LV_OPA_COVER, LV_PART_MAIN);
 
-    /* A rule across the top, so a static render is obvious even if the
-     * animation below never ticks. */
-    lv_obj_t *rule = solid_rect(screen, 110, 3);
-    lv_obj_set_align(rule, LV_ALIGN_TOP_MID);
-    lv_obj_set_pos(rule, 0, 14);
+    canvas = lv_canvas_create(screen);
+    lv_canvas_set_buffer(canvas, canvas_buf, CANVAS_PX, CANVAS_PX, LV_COLOR_FORMAT_I1);
+    lv_canvas_set_palette(canvas, 0, (lv_color32_t){.red = 0, .green = 0, .blue = 0, .alpha = 0xFF});
+    lv_canvas_set_palette(canvas, 1,
+                          (lv_color32_t){.red = 0xFF, .green = 0xFF, .blue = 0xFF, .alpha = 0xFF});
+    lv_obj_center(canvas);
 
-    for (int i = 0; i < BAR_COUNT; i++) {
-        lv_obj_t *bar = solid_rect(screen, BAR_WIDTH, BAR_MIN_HEIGHT);
+    /*
+     * Boot-time cycle counter as the seed: varies run to run without
+     * needing an RNG driver, and zero is unreachable so xorshift cannot
+     * lock up.
+     */
+    rng_state = k_cycle_get_32() | 1;
 
-        /*
-         * Set the alignment rather than calling lv_obj_align(), so that the
-         * bottom edge stays pinned as the animation changes the height and
-         * the bars grow upward instead of off the bottom of the panel.
-         */
-        lv_obj_set_align(bar, LV_ALIGN_BOTTOM_LEFT);
-        lv_obj_set_pos(bar, BAR_LEFT_MARGIN + i * (BAR_WIDTH + BAR_GAP), -BAR_BOTTOM_MARGIN);
+    seed_world();
+    memcpy(prev2, world, sizeof(world));
+    draw_world();
 
-        /*
-         * Deliberately mismatched durations, so the bars drift out of phase
-         * with each other instead of moving as one block.
-         */
-        lv_anim_t anim;
-        lv_anim_init(&anim);
-        lv_anim_set_var(&anim, bar);
-        lv_anim_set_exec_cb(&anim, bar_set_height);
-        lv_anim_set_values(&anim, BAR_MIN_HEIGHT, BAR_MAX_HEIGHT - (i % 4) * 16);
-        lv_anim_set_duration(&anim, 420 + i * 130);
-        lv_anim_set_playback_duration(&anim, 380 + i * 90);
-        lv_anim_set_repeat_count(&anim, LV_ANIM_REPEAT_INFINITE);
-        lv_anim_start(&anim);
-    }
+    lv_timer_create(life_tick, STEP_MS, NULL);
 
     return screen;
 }
