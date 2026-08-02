@@ -1,0 +1,11 @@
+# Copyright (c) 2026 The ZMK Contributors
+# SPDX-License-Identifier: MIT
+
+config DILEMMA_LAYER_RGB
+    bool "Color the underglow by active layer"
+    default y
+    depends on ZMK_RGB_UNDERGLOW && ZMK_SPLIT_ROLE_CENTRAL
+    help
+      Sets the underglow to a solid per-layer color on every layer change.
+      Central only: the rgb_ug behavior's global locality forwards each
+      change to the peripheral, so both halves stay in step.
