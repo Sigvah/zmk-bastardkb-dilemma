@@ -3,18 +3,27 @@
  *
  * SPDX-License-Identifier: MIT
  *
- * Conway's Game of Life on the left half's 128x128 OLED.
+ * Status screen for the left half's 128x128 OLED.
  *
- * The left half is the split peripheral, so no layer or output state ever
- * reaches this display; the screen is fully self-contained. A 32x32
- * toroidal world is stepped by an LVGL timer and drawn as 4x4 pixel cells
- * into an I1 canvas whose buffer lives in static memory, so rendering
- * never touches the LVGL heap and involves no fonts or theme styling.
+ * Top row: four modifier indicators (shift, cmd, alt, ctrl). Modifier
+ * state lives on the central; sync/state_sync.c forwards it here over the
+ * split link and this screen just reads the result.
+ *
+ * Below: one bar per left-hand column that jumps when a key in that column
+ * is pressed and decays back down. The peripheral raises position events
+ * for its own matrix locally, so this needs no data from the central.
+ *
+ * Built from plain rectangles only: no canvas, no fonts, no theme-supplied
+ * styles, and nothing allocated after the screen is created. Every LVGL
+ * object is touched exclusively from the display thread's timer.
  */
 
 #include <zephyr/kernel.h>
 
 #include <lvgl.h>
+
+#include <zmk/event_manager.h>
+#include <zmk/events/position_state_changed.h>
 
 /*
  * Declared rather than included: zmk/display/status_screen.h lives under the
@@ -23,103 +32,94 @@
  */
 lv_obj_t *zmk_display_status_screen(void);
 
-#define GRID 32
-#define CELL 4 /* pixels per cell edge; GRID * CELL == panel resolution */
-#define CANVAS_PX (GRID * CELL)
-#define STRIDE (CANVAS_PX / 8) /* bytes per canvas row at 1bpp */
-#define PALETTE_BYTES 8        /* I1: two lv_color32_t palette entries */
-#define STEP_MS 150
-#define STAGNANT_GENS 24 /* period <= 2 for this many steps -> reseed */
+extern volatile uint8_t dilemma_synced_mods;
 
-static uint8_t canvas_buf[LV_CANVAS_BUF_SIZE(CANVAS_PX, CANVAS_PX, 1, 1)];
+#define TICK_MS 50
 
-/* World plus one generation of history for period-1/2 stagnation checks. */
-static uint8_t world[GRID][GRID];
-static uint8_t scratch[GRID][GRID];
-static uint8_t prev2[GRID][GRID];
-static uint16_t stagnant_count;
+/* Modifier indicators: left to right shift, cmd, alt, ctrl. Each mask
+ * covers the left and right variant of the modifier. */
+#define MOD_COUNT 4
+#define MOD_W 24
+#define MOD_GAP 8
+#define MOD_H_ACTIVE 26
+#define MOD_H_IDLE 3
+#define MOD_Y 8
+static const uint8_t mod_masks[MOD_COUNT] = {
+    0x22, // shift: LSFT | RSFT
+    0x88, // cmd:   LGUI | RGUI
+    0x44, // alt:   LALT | RALT
+    0x11, // ctrl:  LCTL | RCTL
+};
+static lv_obj_t *mod_rects[MOD_COUNT];
 
-static lv_obj_t *canvas;
+/* One bar per left-hand column. */
+#define BAR_COUNT 5
+#define BAR_W 18
+#define BAR_GAP 6
+#define BAR_MIN 4
+#define BAR_MAX 74
+#define BAR_BOTTOM_MARGIN 6
+#define BAR_DECAY 5 /* pixels per tick */
+static lv_obj_t *bar_rects[BAR_COUNT];
 
-static uint32_t rng_state;
+/* Written from the position-event listener, consumed by the LVGL timer. */
+static volatile uint8_t bar_levels[BAR_COUNT];
 
-static uint32_t rng_next(void) {
-    /* xorshift32: tiny and plenty for soup seeding */
-    rng_state ^= rng_state << 13;
-    rng_state ^= rng_state >> 17;
-    rng_state ^= rng_state << 5;
-    return rng_state;
-}
+static int position_listener(const zmk_event_t *eh) {
+    const struct zmk_position_state_changed *ev = as_zmk_position_state_changed(eh);
 
-static void seed_world(void) {
-    /*
-     * Random soup at ~1/3 density across the middle of the grid, leaving a
-     * quiet border so early activity does not immediately wrap around the
-     * torus and collide with itself.
-     */
-    memset(world, 0, sizeof(world));
-    for (int y = 3; y < GRID - 3; y++) {
-        for (int x = 3; x < GRID - 3; x++) {
-            world[y][x] = (rng_next() % 3) == 0;
-        }
-    }
-    stagnant_count = 0;
-}
-
-static void step_world(void) {
-    for (int y = 0; y < GRID; y++) {
-        int up = (y + GRID - 1) % GRID, down = (y + 1) % GRID;
-        for (int x = 0; x < GRID; x++) {
-            int left = (x + GRID - 1) % GRID, right = (x + 1) % GRID;
-            int n = world[up][left] + world[up][x] + world[up][right] + world[y][left] +
-                    world[y][right] + world[down][left] + world[down][x] + world[down][right];
-            scratch[y][x] = n == 3 || (n == 2 && world[y][x]);
-        }
-    }
-}
-
-static void draw_world(void) {
-    /*
-     * Write the I1 canvas buffer directly: an 8 byte palette header, then
-     * row-major rows of STRIDE bytes, most significant bit leftmost. Each
-     * cell row expands to a nibble pattern repeated for CELL panel rows.
-     */
-    uint8_t *rows = canvas_buf + PALETTE_BYTES;
-
-    for (int cy = 0; cy < GRID; cy++) {
-        uint8_t line[STRIDE];
-        for (int b = 0; b < STRIDE; b++) {
-            /* two cells per byte at 4px per cell */
-            uint8_t hi = world[cy][b * 2] ? 0xF0 : 0x00;
-            uint8_t lo = world[cy][b * 2 + 1] ? 0x0F : 0x00;
-            line[b] = hi | lo;
-        }
-        for (int r = 0; r < CELL; r++) {
-            memcpy(rows + (cy * CELL + r) * STRIDE, line, STRIDE);
-        }
+    if (ev == NULL || !ev->state) {
+        return ZMK_EV_EVENT_BUBBLE;
     }
 
-    lv_obj_invalidate(canvas);
-}
-
-static void life_tick(lv_timer_t *timer) {
-    step_world();
-
-    bool period1 = memcmp(scratch, world, sizeof(world)) == 0;
-    bool period2 = memcmp(scratch, prev2, sizeof(world)) == 0;
-    if (period1 || period2) {
-        if (++stagnant_count >= STAGNANT_GENS) {
-            seed_world();
-            draw_world();
-            return;
+    /* Rows are 10 wide across both halves; this half owns columns 0-4 of
+     * rows 0-2 and thumb positions 30-32, which map onto the inner
+     * columns. */
+    uint32_t col;
+    if (ev->position < 30) {
+        col = ev->position % 10;
+        if (col > 4) {
+            return ZMK_EV_EVENT_BUBBLE;
         }
+    } else if (ev->position <= 32) {
+        col = ev->position - 30 + 2;
     } else {
-        stagnant_count = 0;
+        return ZMK_EV_EVENT_BUBBLE;
     }
 
-    memcpy(prev2, world, sizeof(world));
-    memcpy(world, scratch, sizeof(world));
-    draw_world();
+    bar_levels[col] = BAR_MAX;
+    return ZMK_EV_EVENT_BUBBLE;
+}
+
+ZMK_LISTENER(oled_bars, position_listener);
+ZMK_SUBSCRIPTION(oled_bars, zmk_position_state_changed);
+
+static lv_obj_t *solid_rect(lv_obj_t *parent, int32_t w, int32_t h) {
+    lv_obj_t *rect = lv_obj_create(parent);
+
+    lv_obj_remove_style_all(rect);
+    lv_obj_set_style_bg_color(rect, lv_color_white(), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(rect, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_set_size(rect, w, h);
+
+    return rect;
+}
+
+static void screen_tick(lv_timer_t *timer) {
+    uint8_t mods = dilemma_synced_mods;
+
+    for (int i = 0; i < MOD_COUNT; i++) {
+        lv_obj_set_height(mod_rects[i], (mods & mod_masks[i]) ? MOD_H_ACTIVE : MOD_H_IDLE);
+    }
+
+    for (int i = 0; i < BAR_COUNT; i++) {
+        uint8_t level = bar_levels[i];
+        if (level > BAR_MIN) {
+            level = level > BAR_MIN + BAR_DECAY ? level - BAR_DECAY : BAR_MIN;
+            bar_levels[i] = level;
+        }
+        lv_obj_set_height(bar_rects[i], MAX(level, BAR_MIN));
+    }
 }
 
 lv_obj_t *zmk_display_status_screen(void) {
@@ -129,25 +129,23 @@ lv_obj_t *zmk_display_status_screen(void) {
     lv_obj_set_style_bg_color(screen, lv_color_black(), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(screen, LV_OPA_COVER, LV_PART_MAIN);
 
-    canvas = lv_canvas_create(screen);
-    lv_canvas_set_buffer(canvas, canvas_buf, CANVAS_PX, CANVAS_PX, LV_COLOR_FORMAT_I1);
-    lv_canvas_set_palette(canvas, 0, (lv_color32_t){.red = 0, .green = 0, .blue = 0, .alpha = 0xFF});
-    lv_canvas_set_palette(canvas, 1,
-                          (lv_color32_t){.red = 0xFF, .green = 0xFF, .blue = 0xFF, .alpha = 0xFF});
-    lv_obj_center(canvas);
+    int mod_x0 = (128 - (MOD_COUNT * MOD_W + (MOD_COUNT - 1) * MOD_GAP)) / 2;
+    for (int i = 0; i < MOD_COUNT; i++) {
+        mod_rects[i] = solid_rect(screen, MOD_W, MOD_H_IDLE);
+        lv_obj_set_pos(mod_rects[i], mod_x0 + i * (MOD_W + MOD_GAP), MOD_Y);
+    }
 
-    /*
-     * Boot-time cycle counter as the seed: varies run to run without
-     * needing an RNG driver, and zero is unreachable so xorshift cannot
-     * lock up.
-     */
-    rng_state = k_cycle_get_32() | 1;
+    int bar_x0 = (128 - (BAR_COUNT * BAR_W + (BAR_COUNT - 1) * BAR_GAP)) / 2;
+    for (int i = 0; i < BAR_COUNT; i++) {
+        bar_rects[i] = solid_rect(screen, BAR_W, BAR_MIN);
+        bar_levels[i] = BAR_MIN;
+        /* Bottom-left alignment keeps the bottom edge pinned while the
+         * timer changes the height, so bars grow upward. */
+        lv_obj_set_align(bar_rects[i], LV_ALIGN_BOTTOM_LEFT);
+        lv_obj_set_pos(bar_rects[i], bar_x0 + i * (BAR_W + BAR_GAP), -BAR_BOTTOM_MARGIN);
+    }
 
-    seed_world();
-    memcpy(prev2, world, sizeof(world));
-    draw_world();
-
-    lv_timer_create(life_tick, STEP_MS, NULL);
+    lv_timer_create(screen_tick, TICK_MS, NULL);
 
     return screen;
 }

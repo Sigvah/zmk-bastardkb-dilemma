@@ -1,0 +1,11 @@
+# Copyright (c) 2026 The ZMK Contributors
+# SPDX-License-Identifier: MIT
+
+description: |
+  Internal channel for pushing central-side state to the peripheral. Not
+  meant to be bound in keymaps; the central invokes it programmatically and
+  the split transport forwards it to the peripheral by name.
+
+compatible: "dilemma,behavior-state-sync"
+
+include: two_param.yaml

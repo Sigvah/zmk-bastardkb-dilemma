@@ -1,3 +1,4 @@
 rsource "drivers/Kconfig"
 rsource "display/Kconfig"
 rsource "rgb/Kconfig"
+rsource "sync/Kconfig"

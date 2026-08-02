@@ -1,0 +1,10 @@
+# Copyright (c) 2026 The ZMK Contributors
+# SPDX-License-Identifier: MIT
+
+config DILEMMA_STATE_SYNC
+    bool "Sync modifier state from central to peripheral"
+    default y
+    depends on ZMK_SPLIT
+    help
+      Forwards the held-modifier byte to the peripheral as invocations of
+      the state_sync behavior, for the peripheral's screen to display.

@@ -165,3 +165,17 @@ zephyr_udc0: &usbd {
 &default_layout {
     transform = <&default_transform>;
 };
+
+/ {
+    behaviors {
+        /*
+         * State sync channel. Must exist on both halves: the central
+         * invokes it by name over the split link and the peripheral looks
+         * it up by that same name to execute it. See sync/state_sync.c.
+         */
+        state_sync: state_sync {
+            compatible = "dilemma,behavior-state-sync";
+            #binding-cells = <2>;
+        };
+    };
+};
