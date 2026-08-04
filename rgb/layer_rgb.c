@@ -60,12 +60,28 @@ static void invoke_rgb(uint32_t cmd, uint32_t param) {
 }
 
 static void apply_layer_color(struct k_work *work) {
+    static uint32_t last_sent = UINT32_MAX;
+    static bool effect_sent;
+
     zmk_keymap_layer_index_t layer = zmk_keymap_highest_layer_active();
     const struct layer_color *c =
         &colors[MIN(layer, (zmk_keymap_layer_index_t)(ARRAY_SIZE(colors) - 1))];
+    uint32_t hsb = RGB_COLOR_HSB_VAL(c->h, c->s, c->b);
 
-    invoke_rgb(RGB_EFS_CMD, 0); // solid
-    invoke_rgb(RGB_COLOR_HSB_CMD, RGB_COLOR_HSB_VAL(c->h, c->s, c->b));
+    /*
+     * Skip no-op updates: every rgb_ug invocation schedules a settings
+     * save on both halves, and on RP2040 those saves stall the chip (see
+     * the SETTINGS_SAVE_DEBOUNCE note in the defconfigs), so only send
+     * when something actually changes and select the solid effect once.
+     */
+    if (!effect_sent) {
+        invoke_rgb(RGB_EFS_CMD, 0); // solid
+        effect_sent = true;
+    }
+    if (hsb != last_sent) {
+        last_sent = hsb;
+        invoke_rgb(RGB_COLOR_HSB_CMD, hsb);
+    }
 }
 
 static K_WORK_DELAYABLE_DEFINE(color_work, apply_layer_color);

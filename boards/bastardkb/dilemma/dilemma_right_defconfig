@@ -48,3 +48,10 @@ CONFIG_ZMK_POINTING=y
 CONFIG_RETAINED_MEM=y
 CONFIG_RETENTION=y
 CONFIG_RETENTION_BOOT_MODE=y
+
+# RP2040 runs code from the same flash that settings write to, so every
+# settings save stalls the whole chip (XIP), long enough to miss wired
+# split polls and freeze input. The rgb_ug behavior schedules a save on
+# every color or effect change, which the layer color module triggers
+# constantly. Coalesce saves to at most one per 10 minutes of quiet.
+CONFIG_ZMK_SETTINGS_SAVE_DEBOUNCE=600000
