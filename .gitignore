@@ -1,0 +1,3 @@
+
+# west workspace marker; this repo is a manifest/module repo, never a workspace topdir
+.west/
