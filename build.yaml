@@ -1,37 +1,10 @@
 ---
+# The right half always carries the Procyon trackpad, so every right-half
+# image includes the procyon_vik shield. Plain dilemma_right images were
+# removed because flashing one is indistinguishable from a working board
+# with a dead trackpad, which has already caused one false alarm.
 include:
-  - board: dilemma_left
-    snippet: zmk-usb-logging
-    artifact-name: dilemma_left_logging
-  - board: dilemma_right
-    snippet: zmk-usb-logging
-    artifact-name: dilemma_right_logging
-  - board: dilemma_left
-    snippet: studio-rpc-usb-uart
-    cmake-args: -DCONFIG_ZMK_STUDIO=y
-    artifact-name: dilemma_left_studio
-  - board: dilemma_right
-    snippet: studio-rpc-usb-uart
-    cmake-args: -DCONFIG_ZMK_STUDIO=y
-    artifact-name: dilemma_right_studio
-  - board: dilemma_right
-    shield: procyon_vik
-    snippet: zmk-usb-logging
-    artifact-name: dilemma_right_procyon_logging
-  - board: dilemma_right
-    shield: procyon_vik
-    snippet: studio-rpc-usb-uart
-    cmake-args: -DCONFIG_ZMK_STUDIO=y
-    artifact-name: dilemma_right_procyon_studio
-  # Flash these once to wipe saved settings, then flash the normal firmware.
-  # The RGB underglow state is persisted to flash and overrides the defconfig
-  # defaults on boot, so a saved "off" state can only be cleared this way.
-  - board: dilemma_left
-    shield: settings_reset
-    artifact-name: dilemma_left_settings_reset
-  - board: dilemma_right
-    shield: settings_reset
-    artifact-name: dilemma_right_settings_reset
+  # --- left half -----------------------------------------------------------
   - board: dilemma_left
     shield: oled_vik
     artifact-name: dilemma_left_oled
@@ -39,3 +12,48 @@ include:
     shield: oled_vik
     snippet: zmk-usb-logging
     artifact-name: dilemma_left_oled_logging
+  - board: dilemma_left
+    snippet: studio-rpc-usb-uart
+    cmake-args: -DCONFIG_ZMK_STUDIO=y
+    artifact-name: dilemma_left_studio
+  - board: dilemma_left
+    snippet: zmk-usb-logging
+    artifact-name: dilemma_left_logging
+
+  # --- right half ----------------------------------------------------------
+  # Daily driver. Studio pulls in the settings subsystem, so this is the
+  # only right image that reads or writes persistent settings.
+  - board: dilemma_right
+    shield: procyon_vik
+    snippet: studio-rpc-usb-uart
+    cmake-args: -DCONFIG_ZMK_STUDIO=y
+    artifact-name: dilemma_right_procyon_studio
+  # No Studio and therefore no settings subsystem at all: this image never
+  # touches the settings partition, so it boots regardless of what is in
+  # it. Flash it to tell a corrupted-settings failure apart from a
+  # firmware failure.
+  - board: dilemma_right
+    shield: procyon_vik
+    artifact-name: dilemma_right_procyon
+  - board: dilemma_right
+    shield: procyon_vik
+    snippet: zmk-usb-logging
+    artifact-name: dilemma_right_procyon_logging
+  # One-flash recovery: the full daily driver, but it erases the settings
+  # partition at boot before anything reads it. Flash this once if the
+  # studio image will not come up, let it boot, then flash the normal
+  # studio image again, since this one wipes settings on every boot and
+  # Studio edits would never persist.
+  - board: dilemma_right
+    shield: procyon_vik
+    snippet: studio-rpc-usb-uart
+    cmake-args: -DCONFIG_ZMK_STUDIO=y -DCONFIG_ZMK_SETTINGS_RESET_ON_START=y
+    artifact-name: dilemma_right_procyon_recovery
+
+  # --- settings wipers (keyboard does not type while these are flashed) ----
+  - board: dilemma_left
+    shield: settings_reset
+    artifact-name: dilemma_left_settings_reset
+  - board: dilemma_right
+    shield: settings_reset
+    artifact-name: dilemma_right_settings_reset

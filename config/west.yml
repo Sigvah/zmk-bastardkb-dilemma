@@ -7,7 +7,12 @@ manifest:
   projects:
     - name: zmk
       remote: zmkfirmware
-      revision: main
+      # Pinned so CI builds the exact tree the firmware was verified against.
+      # Tracking main meant every push rebuilt against whatever upstream was
+      # that day, which makes a regression impossible to bisect. Bump
+      # deliberately, after checking the modules under rgb/, sync/ and
+      # display/ still compile against the new tree.
+      revision: 4dd95d78
       import: app/west.yml
   self:
     path: config
